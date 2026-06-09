@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Knossos Manpower Tracker</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;min-height:100vh;}
+  #header{background:#1e3a5f;padding:11px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2);flex-wrap:wrap;gap:8px;}
+  .logo{color:#c8a84b;font-weight:800;font-size:17px;letter-spacing:.5px;}
+  .sub{color:#94a3b8;font-size:10px;font-weight:600;}
+  #tabs{display:flex;gap:5px;}
+  .tab-btn{background:rgba(255,255,255,.1);color:#e2e8f0;border:none;border-radius:7px;padding:6px 11px;font-weight:800;font-size:11px;cursor:pointer;}
+  .tab-btn.active{background:#c8a84b;color:#1e3a5f;}
+  #body{padding:14px;max-width:1200px;margin:0 auto;}
+
+  /* Date nav */
+  .date-nav{display:flex;align-items:center;gap:7px;margin-bottom:12px;flex-wrap:wrap;}
+  .nav-btn{background:#fff;border:1.5px solid #cbd5e1;border-radius:7px;padding:5px 12px;font-size:17px;cursor:pointer;color:#334155;line-height:1;}
+  input[type=date]{font-size:14px;padding:5px 9px;border-radius:7px;border:1px solid #d1d5db;background:#fff;font-family:inherit;}
+  .today-btn{background:#1e3a5f;color:#fff;border:none;border-radius:7px;padding:6px 13px;font-weight:800;font-size:12px;cursor:pointer;}
+  .week-label{font-size:11px;font-weight:700;color:#c8a84b;background:#1e3a5f;padding:4px 9px;border-radius:7px;}
+
+  /* Summary */
+  .summary-bar{display:flex;gap:7px;margin-bottom:11px;flex-wrap:wrap;}
+  .sum-chip{border-radius:16px;padding:3px 11px;font-weight:700;font-size:11px;border:1.5px solid;white-space:nowrap;}
+
+  /* Filter */
+  .filter-bar{display:flex;gap:5px;margin-bottom:9px;flex-wrap:wrap;align-items:center;}
+  .filter-label{font-size:11px;color:#64748b;font-weight:700;}
+  .jc{border:1px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:13px;padding:3px 8px;font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap;}
+  .jc.active{background:#c8a84b;color:#fff;border-color:#c8a84b;font-weight:800;}
+  .jc.all{background:#1e3a5f;color:#fff;border-color:#1e3a5f;}
+  .add-job-btn{border:1px dashed #86efac;background:#f0fdf4;color:#16a34a;border-radius:13px;padding:3px 8px;font-size:11px;cursor:pointer;font-weight:600;}
+
+  .add-job-row{display:flex;gap:7px;margin-bottom:10px;align-items:center;flex-wrap:wrap;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;}
+  .add-job-row input{font-size:13px;padding:5px 8px;border-radius:7px;border:1.5px solid #c8a84b;}
+  .btn-gold{background:#c8a84b;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:12px;}
+  .btn-gray{background:#e2e8f0;color:#475569;border:none;border-radius:7px;padding:5px 12px;font-weight:600;cursor:pointer;font-size:12px;}
+  .btn-red{background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:5px 10px;font-weight:700;cursor:pointer;font-size:12px;}
+
+  /* Employee cards */
+  .emp-list{display:flex;flex-direction:column;gap:6px;}
+  .emp-card{background:#fff;border-radius:10px;border:1.5px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden;}
+  .emp-card.editing{border-color:#c8a84b;box-shadow:0 2px 8px rgba(200,168,75,.18);}
+  .emp-card.off-card{opacity:.6;}
+  .emp-header{display:flex;align-items:center;padding:8px 12px;gap:9px;cursor:pointer;user-select:none;flex-wrap:wrap;}
+  .emp-header:hover{background:#f8fafc;}
+  .emp-name{font-weight:700;font-size:13px;color:#1e293b;min-width:155px;flex:1;}
+  .emp-badges{display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
+  .jbadge{background:#1e3a5f;color:#c8a84b;border-radius:11px;padding:2px 7px;font-size:11px;font-weight:800;white-space:nowrap;}
+  .sdot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;}
+  .expand-icon{color:#94a3b8;font-size:15px;margin-left:auto;transition:transform .2s;flex-shrink:0;}
+  .expand-icon.open{transform:rotate(180deg);}
+  .assignments{border-top:1px solid #f1f5f9;}
+  .arow{display:flex;align-items:center;gap:7px;padding:5px 12px;border-bottom:1px solid #f8fafc;flex-wrap:wrap;}
+  .arow:last-child{border-bottom:none;}
+  .ajob{background:#1e3a5f;color:#c8a84b;border-radius:9px;padding:2px 7px;font-size:11px;font-weight:800;white-space:nowrap;}
+  .astatus{border-radius:9px;padding:2px 7px;font-size:11px;font-weight:700;border:1px solid;white-space:nowrap;}
+  .anote{font-size:11px;color:#64748b;font-style:italic;flex:1;}
+
+  /* Edit panel */
+  .edit-panel{padding:10px 12px;background:#fffbeb;border-top:1.5px solid #fde68a;}
+  .ep-title{font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;margin-bottom:7px;letter-spacing:.4px;}
+  .ear{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:6px 9px;}
+  .ear-num{font-size:11px;font-weight:800;color:#94a3b8;min-width:14px;}
+  .ear select,.nar select{font-size:12px;padding:4px 6px;border-radius:6px;border:1.5px solid #cbd5e1;background:#fff;}
+  .ear select.jsel,.nar select.njsel{border-color:#c8a84b;min-width:170px;max-width:250px;}
+  .ear input[type=text],.nar input[type=text]{font-size:12px;padding:4px 6px;border-radius:6px;border:1px solid #d1d5db;flex:1;min-width:70px;}
+  .sbtns{display:flex;gap:3px;flex-wrap:wrap;}
+  .sopt{border-radius:11px;padding:3px 7px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid;white-space:nowrap;}
+  .del-btn{background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:3px 7px;font-weight:800;cursor:pointer;font-size:11px;}
+  .nar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px dashed #fde68a;}
+  .add-btn{background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 11px;font-weight:700;cursor:pointer;font-size:12px;white-space:nowrap;}
+  .done-btn{background:#1e3a5f;color:#fff;border:none;border-radius:7px;padding:5px 15px;font-weight:800;cursor:pointer;font-size:12px;margin-top:9px;}
+  .off-toggle{display:flex;align-items:center;gap:7px;margin-top:9px;padding-top:7px;border-top:1px solid #fde68a;font-size:12px;color:#64748b;cursor:pointer;}
+  .toggle{position:relative;width:36px;height:19px;flex-shrink:0;}
+  .toggle input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;top:0;left:0;right:0;bottom:0;background:#cbd5e1;border-radius:19px;cursor:pointer;transition:.2s;}
+  .slider:before{content:"";position:absolute;height:13px;width:13px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
+  input:checked+.slider{background:#22c55e;}
+  input:checked+.slider:before{transform:translateX(17px);}
+
+  /* Week view */
+  .week-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{border-collapse:collapse;width:100%;min-width:720px;font-size:11px;}
+  thead{background:#1e3a5f;}
+  th{padding:7px 4px;font-weight:700;font-size:10px;color:#e2e8f0;text-align:center;}
+  th.ec{text-align:left;padding-left:9px;color:#c8a84b;width:145px;}
+  th.tdc{background:#162d4a;color:#c8a84b!important;}
+  td{padding:3px 3px;text-align:center;border-left:1px solid #e2e8f0;cursor:pointer;vertical-align:top;}
+  td.etd{text-align:left;padding-left:7px;font-weight:700;color:#1e293b;border-right:2px solid #e2e8f0;cursor:default;font-size:10px;vertical-align:middle;white-space:nowrap;}
+  tr:nth-child(even){background:#f8fafc;}
+  .cjob{font-weight:800;color:#1e3a5f;font-size:10px;line-height:1.4;white-space:nowrap;}
+  .cdot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:2px;vertical-align:middle;}
+
+  /* Job view */
+  .job-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:12px;}
+  .jcard{background:#fff;border:2px solid #1e3a5f;border-radius:10px;overflow:hidden;box-shadow:0 2px 5px rgba(0,0,0,.07);}
+  .jcard-hdr{background:#1e3a5f;padding:7px 11px;}
+  .jcard-num{color:#c8a84b;font-weight:800;font-size:13px;}
+  .jcard-name{color:#94a3b8;font-size:10px;font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .jcard-cnt{color:#e2e8f0;font-size:11px;font-weight:700;float:right;margin-top:-18px;}
+  .jcard-body{padding:6px 10px;}
+  .wrow{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #f1f5f9;}
+  .wrow:last-child{border-bottom:none;}
+  .wdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .wname{flex:1;font-size:12px;font-weight:600;color:#1e293b;}
+  .wnote{font-size:10px;color:#64748b;}
+  .wstat{font-size:10px;font-weight:700;}
+  .unbox{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 11px;}
+  .unbox-title{font-weight:700;color:#64748b;font-size:11px;margin-bottom:5px;}
+  .off-chips{display:flex;flex-wrap:wrap;gap:4px;}
+  .oc{background:#e2e8f0;color:#64748b;border-radius:11px;padding:2px 8px;font-size:11px;}
+
+  /* Projects tab */
+  .proj-table{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:14px;}
+  .proj-table table{min-width:0;}
+  .proj-table th{padding:8px 12px;text-align:left;}
+  .proj-table td{padding:6px 10px;border-left:none;cursor:default;vertical-align:middle;}
+  .proj-table tr:hover td{background:#f8fafc!important;}
+  .edit-proj-row input{font-size:12px;padding:4px 7px;border-radius:6px;border:1.5px solid #c8a84b;margin-right:5px;}
+  .badge-archived{background:#f1f5f9;color:#94a3b8;border-radius:10px;padding:2px 7px;font-size:10px;font-weight:700;border:1px solid #cbd5e1;}
+  .badge-active{background:#dcfce7;color:#16a34a;border-radius:10px;padding:2px 7px;font-size:10px;font-weight:700;border:1px solid #86efac;}
+
+  .empty-msg{text-align:center;padding:40px 20px;color:#94a3b8;font-size:14px;line-height:1.8;}
+  .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .modal{background:#fff;border-radius:12px;padding:20px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);}
+  .modal h3{font-size:14px;font-weight:800;color:#1e3a5f;margin-bottom:12px;}
+  .modal input{width:100%;font-size:14px;padding:7px 10px;border-radius:8px;border:1.5px solid #c8a84b;margin-bottom:8px;font-family:inherit;}
+  .modal-btns{display:flex;gap:8px;margin-top:4px;}
+  .confirm-box{background:#fff7ed;border:1.5px solid #fed7aa;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:#7c2d12;}
+</style>
+</head>
+<body>
+<div id="header">
+  <div><div class="logo">KNOSSOS</div><div class="sub">MANPOWER TRACKER</div></div>
+  <div id="tabs">
+    <button class="tab-btn active" onclick="switchView('day')">DAY</button>
+    <button class="tab-btn" onclick="switchView('week')">WEEK</button>
+    <button class="tab-btn" onclick="switchView('job')">BY JOB</button>
+    <button class="tab-btn" onclick="switchView('projects')">PROJECTS</button>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="body"></div>
+
+<script>
+// ─── MASTER PROJECT LIST ────────────────────────────────────────────────────
+const SEED_PROJECTS = [
+  {id:"2716",name:"220 East 9th Street"},
+  {id:"2717",name:"711 Millwork 2 & 33"},
+  {id:"2760",name:"New York Athletic Club"},
+  {id:"2794",name:"179 N 10"},
+  {id:"2803",name:"138 Joralemon"},
+  {id:"2804",name:"George Papadonikolakis"},
+  {id:"2812",name:"170 Harbor Ln Roslyn"},
+  {id:"2815",name:"30 Little West St Apt 4B"},
+  {id:"2828",name:"Lau Qiu Res"},
+  {id:"2836",name:"Tulum Tacos Restaurant"},
+  {id:"2849",name:"30 Front St PHB"},
+  {id:"2853",name:"756 Washington"},
+  {id:"2858",name:"Royalton Restaurant"},
+  {id:"2865",name:"160 E 32"},
+  {id:"2878",name:"145 West 86th St Apt 6A"},
+  {id:"2879",name:"Happy Hour 4 Kids"},
+  {id:"2891",name:"Janet Strauss 200 E 71 ST"},
+  {id:"3797",name:"Parcells Plastic Surgery"},
+  {id:"WILKS",name:"WILKS 911 Park Ave Apt 6B"},
+  {id:"SHOP",name:"Shop"},
+  {id:"PLI",name:"PLI Builders"},
+];
+
+const EMPLOYEES = [
+  "ANDRES NARVAEZ","ANGEL MARTINEZ","CARLOS IDROVO","CARLOS PAREDES",
+  "CRISTHIAN ALVAREZ","EDWIN CABRERA LOPEZ","FRED MARTINEZ","HENRY ALCAIDE",
+  "HUGO DELGADO","HULMI MOLINA","JOSE ASTUDILLO","ALFREDO SERRANO",
+  "PABLO MOROCHO","PASCUAL PERALTA","RAMON PINALES","RHENSO MARTINEZ",
+  "RODRIGO BACHAN","STEVE ACEVEDO","VICTOR PEREZ","WLADIMIR CABRERA LOPEZ",
+  "XAVIER PULLA DELGADO","JULIAN CARDONA"
+];
+
+const STATUS = [
+  {v:"field",label:"Field",color:"#22c55e",bg:"#dcfce7"},
+  {v:"shop", label:"Shop", color:"#3b82f6",bg:"#dbeafe"},
+  {v:"punch",label:"Punch",color:"#f59e0b",bg:"#fef3c7"},
+  {v:"travel",label:"Travel",color:"#8b5cf6",bg:"#ede9fe"},
+];
+
+const WEEK_DAYS=["FRI","SAT","SUN","MON","TUE","WED","THU"];
+
+// ─── PRE-FILLED DATA FROM TIMESHEET (6/1–6/9/26) ───────────────────────────
+// Derived from the uploaded Labor Summary PDF
+// Each entry: [dateKey, employeeName, jobId, status]
+const PREFILL = [
+  // Steve Acevedo — 911 Park (Mon-Tue), WILKS (Wed-Thu), 160E32 (Fri pm), Janet Strauss (Fri)
+  ["2026-06-01","STEVE ACEVEDO","WILKS","field"],
+  ["2026-06-02","STEVE ACEVEDO","WILKS","field"],
+  ["2026-06-03","STEVE ACEVEDO","WILKS","field"],
+  ["2026-06-04","STEVE ACEVEDO","WILKS","field"],
+  ["2026-06-05","STEVE ACEVEDO","2891","field"],
+  ["2026-06-05","STEVE ACEVEDO","2865","field"],
+  ["2026-06-08","STEVE ACEVEDO","WILKS","field"],
+
+  // Henry Alcaide
+  ["2026-06-01","HENRY ALCAIDE","WILKS","field"],
+  ["2026-06-02","HENRY ALCAIDE","WILKS","field"],
+  ["2026-06-03","HENRY ALCAIDE","WILKS","field"],
+  ["2026-06-04","HENRY ALCAIDE","WILKS","field"],
+  ["2026-06-05","HENRY ALCAIDE","2891","field"],
+  ["2026-06-05","HENRY ALCAIDE","2865","field"],
+  ["2026-06-06","HENRY ALCAIDE","2804","field"],
+  ["2026-06-08","HENRY ALCAIDE","2760","field"],
+
+  // Cristhian Alvarez
+  ["2026-06-01","CRISTHIAN ALVAREZ","2849","field"],
+  ["2026-06-02","CRISTHIAN ALVAREZ","2849","field"],
+  ["2026-06-03","CRISTHIAN ALVAREZ","2849","field"],
+  ["2026-06-03","CRISTHIAN ALVAREZ","2828","field"],
+  ["2026-06-04","CRISTHIAN ALVAREZ","2849","field"],
+  ["2026-06-05","CRISTHIAN ALVAREZ","2849","field"],
+  ["2026-06-08","CRISTHIAN ALVAREZ","2849","field"],
+
+  // Jose Astudillo
+  ["2026-06-01","JOSE ASTUDILLO","2836","field"],
+  ["2026-06-02","JOSE ASTUDILLO","2836","field"],
+  ["2026-06-03","JOSE ASTUDILLO","2804","field"],
+  ["2026-06-04","JOSE ASTUDILLO","2804","field"],
+  ["2026-06-05","JOSE ASTUDILLO","2804","field"],
+  ["2026-06-06","JOSE ASTUDILLO","2804","field"],
+  ["2026-06-08","JOSE ASTUDILLO","2804","field"],
+
+  // Rodrigo Bachan
+  ["2026-06-01","RODRIGO BACHAN","2812","field"],
+  ["2026-06-02","RODRIGO BACHAN","2836","field"],
+  ["2026-06-02","RODRIGO BACHAN","2804","field"],
+  ["2026-06-03","RODRIGO BACHAN","2760","field"],
+  ["2026-06-04","RODRIGO BACHAN","2760","field"],
+  ["2026-06-05","RODRIGO BACHAN","2760","field"],
+  ["2026-06-06","RODRIGO BACHAN","2760","field"],
+  ["2026-06-08","RODRIGO BACHAN","2760","field"],
+
+  // Edwin Cabrera Lopez
+  ["2026-06-01","EDWIN CABRERA LOPEZ","3797","field"],
+  ["2026-06-02","EDWIN CABRERA LOPEZ","3797","field"],
+  ["2026-06-03","EDWIN CABRERA LOPEZ","3797","field"],
+  ["2026-06-04","EDWIN CABRERA LOPEZ","2815","field"],
+  ["2026-06-05","EDWIN CABRERA LOPEZ","2815","field"],
+  ["2026-06-08","EDWIN CABRERA LOPEZ","3797","field"],
+  ["2026-06-08","EDWIN CABRERA LOPEZ","2815","field"],
+
+  // Wladimir Cabrera Lopez
+  ["2026-06-01","WLADIMIR CABRERA LOPEZ","2828","field"],
+  ["2026-06-02","WLADIMIR CABRERA LOPEZ","2828","field"],
+  ["2026-06-03","WLADIMIR CABRERA LOPEZ","2828","field"],
+  ["2026-06-04","WLADIMIR CABRERA LOPEZ","2716","field"],
+  ["2026-06-05","WLADIMIR CABRERA LOPEZ","2853","field"],
+  ["2026-06-08","WLADIMIR CABRERA LOPEZ","2828","field"],
+  ["2026-06-08","WLADIMIR CABRERA LOPEZ","2853","field"],
+
+  // Hugo Delgado
+  ["2026-06-01","HUGO DELGADO","2828","field"],
+  ["2026-06-02","HUGO DELGADO","2828","field"],
+  ["2026-06-03","HUGO DELGADO","2828","field"],
+  ["2026-06-04","HUGO DELGADO","2828","field"],
+  ["2026-06-05","HUGO DELGADO","2828","field"],
+  ["2026-06-08","HUGO DELGADO","2828","field"],
+
+  // Carlos Idrovo
+  ["2026-06-01","CARLOS IDROVO","2804","field"],
+  ["2026-06-02","CARLOS IDROVO","2804","field"],
+  ["2026-06-03","CARLOS IDROVO","2804","field"],
+  ["2026-06-04","CARLOS IDROVO","2804","field"],
+  ["2026-06-05","CARLOS IDROVO","2804","field"],
+  ["2026-06-06","CARLOS IDROVO","2804","field"],
+  ["2026-06-08","CARLOS IDROVO","2804","field"],
+
+  // Angel Martinez — shop all week (no project listed in PDF, classified as shop)
+  ["2026-06-01","ANGEL MARTINEZ","SHOP","shop"],
+  ["2026-06-02","ANGEL MARTINEZ","SHOP","shop"],
+  ["2026-06-03","ANGEL MARTINEZ","SHOP","shop"],
+  ["2026-06-04","ANGEL MARTINEZ","SHOP","shop"],
+  ["2026-06-05","ANGEL MARTINEZ","SHOP","shop"],
+  ["2026-06-08","ANGEL MARTINEZ","SHOP","shop"],
+
+  // Fred Martinez
+  ["2026-06-01","FRED MARTINEZ","2836","field"],
+  ["2026-06-01","FRED MARTINEZ","2760","field"],
+  ["2026-06-02","FRED MARTINEZ","2828","field"],
+  ["2026-06-03","FRED MARTINEZ","2804","field"],
+  ["2026-06-04","FRED MARTINEZ","2804","field"],
+  ["2026-06-05","FRED MARTINEZ","2836","field"],
+  ["2026-06-08","FRED MARTINEZ","2760","field"],
+
+  // Hulmi Molina
+  ["2026-06-01","HULMI MOLINA","2794","field"],
+  ["2026-06-02","HULMI MOLINA","2804","field"],
+  ["2026-06-03","HULMI MOLINA","2804","field"],
+  ["2026-06-04","HULMI MOLINA","2804","field"],
+  ["2026-06-05","HULMI MOLINA","2804","field"],
+  ["2026-06-08","HULMI MOLINA","2804","field"],
+
+  // Pablo Morocho
+  ["2026-06-01","PABLO MOROCHO","3797","field"],
+  ["2026-06-02","PABLO MOROCHO","3797","field"],
+  ["2026-06-03","PABLO MOROCHO","3797","field"],
+  ["2026-06-04","PABLO MOROCHO","2815","field"],
+  ["2026-06-05","PABLO MOROCHO","2815","field"],
+  ["2026-06-08","PABLO MOROCHO","3797","field"],
+  ["2026-06-08","PABLO MOROCHO","2815","field"],
+
+  // Andres Narvaez
+  ["2026-06-01","ANDRES NARVAEZ","2815","field"],
+  ["2026-06-02","ANDRES NARVAEZ","2815","field"],
+  ["2026-06-03","ANDRES NARVAEZ","2879","field"],
+  ["2026-06-04","ANDRES NARVAEZ","2879","field"],
+  ["2026-06-05","ANDRES NARVAEZ","2879","field"],
+  ["2026-06-08","ANDRES NARVAEZ","2879","field"],
+  ["2026-06-08","ANDRES NARVAEZ","2878","field"],
+
+  // Carlos Paredes
+  ["2026-06-01","CARLOS PAREDES","2828","field"],
+  ["2026-06-02","CARLOS PAREDES","2828","field"],
+  ["2026-06-03","CARLOS PAREDES","2828","field"],
+  ["2026-06-04","CARLOS PAREDES","2760","field"],
+  ["2026-06-05","CARLOS PAREDES","2836","field"],
+  ["2026-06-06","CARLOS PAREDES","2760","field"],
+  ["2026-06-08","CARLOS PAREDES","2760","field"],
+  ["2026-06-08","CARLOS PAREDES","WILKS","field"],
+
+  // Pascual Peralta
+  ["2026-06-01","PASCUAL PERALTA","2717","field"],
+  ["2026-06-02","PASCUAL PERALTA","2717","field"],
+  ["2026-06-03","PASCUAL PERALTA","2879","field"],
+  ["2026-06-04","PASCUAL PERALTA","2879","field"],
+  ["2026-06-05","PASCUAL PERALTA","2879","field"],
+  ["2026-06-08","PASCUAL PERALTA","2879","field"],
+
+  // Victor Perez
+  ["2026-06-01","VICTOR PEREZ","2803","field"],
+  ["2026-06-02","VICTOR PEREZ","2803","field"],
+  ["2026-06-03","VICTOR PEREZ","2803","field"],
+  ["2026-06-04","VICTOR PEREZ","2803","field"],
+  ["2026-06-05","VICTOR PEREZ","2836","field"],
+  ["2026-06-08","VICTOR PEREZ","2803","field"],
+
+  // Ramon Pinales
+  ["2026-06-01","RAMON PINALES","2815","field"],
+  ["2026-06-02","RAMON PINALES","2815","field"],
+  ["2026-06-03","RAMON PINALES","2760","field"],
+  ["2026-06-04","RAMON PINALES","2760","field"],
+  ["2026-06-05","RAMON PINALES","2760","field"],
+  ["2026-06-08","RAMON PINALES","WILKS","field"],
+
+  // Rhenso Martinez
+  ["2026-06-01","RHENSO MARTINEZ","2794","field"],
+  ["2026-06-02","RHENSO MARTINEZ","2804","field"],
+  ["2026-06-03","RHENSO MARTINEZ","2804","field"],
+  ["2026-06-04","RHENSO MARTINEZ","2804","field"],
+  ["2026-06-05","RHENSO MARTINEZ","2804","field"],
+  ["2026-06-08","RHENSO MARTINEZ","2804","field"],
+
+  // Alfredo Serrano
+  ["2026-06-01","ALFREDO SERRANO","2815","field"],
+  ["2026-06-02","ALFREDO SERRANO","2815","field"],
+  ["2026-06-03","ALFREDO SERRANO","2760","field"],
+  ["2026-06-04","ALFREDO SERRANO","2760","field"],
+  ["2026-06-05","ALFREDO SERRANO","2760","field"],
+  ["2026-06-06","ALFREDO SERRANO","2760","field"],
+  ["2026-06-08","ALFREDO SERRANO","2760","field"],
+  ["2026-06-08","ALFREDO SERRANO","WILKS","field"],
+
+  // Xavier Pulla Delgado
+  ["2026-06-01","XAVIER PULLA DELGADO","2836","field"],
+  ["2026-06-02","XAVIER PULLA DELGADO","2836","field"],
+  ["2026-06-03","XAVIER PULLA DELGADO","2836","field"],
+  ["2026-06-04","XAVIER PULLA DELGADO","2836","field"],
+  ["2026-06-05","XAVIER PULLA DELGADO","2836","field"],
+  ["2026-06-08","XAVIER PULLA DELGADO","2836","field"],
+];
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+let currentView="day";
+let selectedDate=todayKey();
+let editingEmp=null;
+let jobFilter="";
+let showAddJob=false;
+let editingProjId=null; // for inline project edit
+
+function todayKey(){return new Date().toISOString().slice(0,10);}
+
+function loadData(){try{return JSON.parse(localStorage.getItem("knossos_v6")||"null");}catch{return null;}}
+function saveData(d){try{localStorage.setItem("knossos_v6",JSON.stringify(d));}catch{}}
+function loadProjects(){try{return JSON.parse(localStorage.getItem("knossos_p2")||"null");}catch{return null;}}
+function saveProjects(p){try{localStorage.setItem("knossos_p2",JSON.stringify(p));}catch{}}
+
+// Load or seed data
+let data = loadData();
+if(!data){
+  data={};
+  // Pre-fill from timesheet
+  PREFILL.forEach(([date,emp,job,status])=>{
+    if(!data[date]) data[date]={};
+    if(!data[date][emp]) data[date][emp]={off:false,assignments:[]};
+    // avoid duplicates
+    if(!data[date][emp].assignments.find(a=>a.job===job)){
+      data[date][emp].assignments.push({job,status,note:""});
+      data[date][emp].off=false;
+    }
+  });
+  saveData(data);
+}
+
+// Load or seed projects
+let projects = loadProjects();
+if(!projects){
+  projects = SEED_PROJECTS.map(p=>({...p,archived:false}));
+  saveProjects(projects);
+}
+
+function activeProjects(){return projects.filter(p=>!p.archived);}
+function allProjectsList(){return projects;}
+function projectById(id){return projects.find(p=>p.id===id)||{id,name:id,archived:false};}
+
+function statusMeta(s){return STATUS.find(x=>x.v===s)||STATUS[0];}
+
+// ─── WEEK CALC (Fri–Thu) ────────────────────────────────────────────────────
+function getWeekDates(anchor){
+  const d=new Date((anchor||selectedDate)+"T00:00:00");
+  const dow=d.getDay();
+  const sinceF=(dow+2)%7;
+  const fri=new Date(d); fri.setDate(d.getDate()-sinceF);
+  return Array.from({length:7},(_,i)=>{const x=new Date(fri);x.setDate(fri.getDate()+i);return x.toISOString().slice(0,10);});
+}
+function weekLabel(dates){return `Week: ${fmt(dates[0])} – ${fmt(dates[6])}`;}
+function fmt(ds){const d=new Date(ds+"T00:00:00");return `${d.getMonth()+1}/${d.getDate()}`;}
+
+// ─── DATA ACCESS ────────────────────────────────────────────────────────────
+function getEmpDay(date,emp){
+  if(!data[date]) data[date]={};
+  if(!data[date][emp]) data[date][emp]={off:true,assignments:[]};
+  return data[date][emp];
+}
+function save(){saveData(data);}
+
+// ─── ACTIONS ────────────────────────────────────────────────────────────────
+function switchView(v){
+  currentView=v;editingEmp=null;editingProjId=null;
+  document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",["day","week","job","projects"][i]===v));
+  render();
+}
+function shiftDate(d){const x=new Date(selectedDate+"T00:00:00");x.setDate(x.getDate()+d);selectedDate=x.toISOString().slice(0,10);editingEmp=null;render();}
+function shiftWeek(d){const x=new Date(selectedDate+"T00:00:00");x.setDate(x.getDate()+(d*7));selectedDate=x.toISOString().slice(0,10);editingEmp=null;render();}
+function setDate(v){selectedDate=v;editingEmp=null;render();}
+function toggleEdit(emp){editingEmp=(editingEmp===emp)?null:emp;render();}
+function toggleJobFilter(j){jobFilter=(jobFilter===j)?"":j;render();}
+function toggleOff(emp){const ed=getEmpDay(selectedDate,emp);ed.off=!ed.off;save();render();}
+function updateAssign(emp,idx,field,val){
+  const ed=getEmpDay(selectedDate,emp);
+  if(ed.assignments[idx]) ed.assignments[idx][field]=val;
+  save();if(field==="status")render();
+}
+function delAssign(emp,idx){
+  const ed=getEmpDay(selectedDate,emp);
+  ed.assignments.splice(idx,1);
+  if(ed.assignments.length===0) ed.off=true;
+  save();render();
+}
+function addAssign(emp){
+  const sid=safeid(emp);
+  const jv=document.getElementById(`nj-${sid}`)?.value||"";
+  const sv=document.getElementById(`ns-${sid}`)?.value||"field";
+  const nv=document.getElementById(`nn-${sid}`)?.value?.trim()||"";
+  if(!jv){alert("Select a project first.");return;}
+  const ed=getEmpDay(selectedDate,emp);
+  ed.assignments.push({job:jv,status:sv,note:nv});
+  ed.off=false;save();render();
+}
+
+// Project management
+function saveProj(){saveProjects(projects);}
+
+function addProject(){
+  const idv=document.getElementById("nji")?.value?.trim()?.toUpperCase()||"";
+  const namev=document.getElementById("njn")?.value?.trim()||"";
+  if(!idv){alert("Job number required.");return;}
+  if(projects.find(p=>p.id===idv)){alert("Job # already exists.");return;}
+  projects.push({id:idv,name:namev||idv,archived:false});
+  saveProj();showAddJob=false;render();
+}
+
+function startEditProject(id){editingProjId=id;render();}
+function cancelEditProject(){editingProjId=null;render();}
+
+function saveEditProject(id){
+  const newId=document.getElementById(`epid-${safeid(id)}`)?.value?.trim()?.toUpperCase()||id;
+  const newName=document.getElementById(`epname-${safeid(id)}`)?.value?.trim()||id;
+  const p=projects.find(x=>x.id===id);
+  if(!p) return;
+  // If ID changed, update all data references
+  if(newId!==id){
+    if(projects.find(x=>x.id===newId&&x.id!==id)){alert("That Job # already exists.");return;}
+    Object.values(data).forEach(day=>{
+      Object.values(day).forEach(ed=>{
+        if(ed.assignments) ed.assignments.forEach(a=>{if(a.job===id) a.job=newId;});
+      });
+    });
+    save();
+    if(jobFilter===id) jobFilter=newId;
+  }
+  p.id=newId;
+  p.name=newName;
+  saveProj();editingProjId=null;render();
+}
+
+function archiveProject(id){
+  if(!confirm(`Archive job #${id}? It will be hidden from dropdowns but data is kept.`)) return;
+  const p=projects.find(x=>x.id===id);
+  if(p){p.archived=true;saveProj();render();}
+}
+
+function restoreProject(id){
+  const p=projects.find(x=>x.id===id);
+  if(p){p.archived=false;saveProj();render();}
+}
+
+function deleteProject(id){
+  if(!confirm(`Permanently DELETE job #${id}? This cannot be undone.`)) return;
+  projects=projects.filter(x=>x.id!==id);
+  saveProj();render();
+}
+
+function safeid(s){return s.replace(/[^a-zA-Z0-9]/g,"_");}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render(){
+  const el=document.getElementById("body");
+  if(currentView==="day") el.innerHTML=renderDay();
+  else if(currentView==="week") el.innerHTML=renderWeek();
+  else if(currentView==="job") el.innerHTML=renderJob();
+  else el.innerHTML=renderProjects();
+}
+
+function dateNavHTML(weekShift){
+  const wd=getWeekDates();
+  return `<div class="date-nav">
+    ${weekShift?`<button class="nav-btn" onclick="shiftWeek(-1)" title="Prev week">«</button>`:""}
+    <button class="nav-btn" onclick="shiftDate(-1)">‹</button>
+    <input type="date" value="${selectedDate}" onchange="setDate(this.value)">
+    <button class="nav-btn" onclick="shiftDate(1)">›</button>
+    ${weekShift?`<button class="nav-btn" onclick="shiftWeek(1)" title="Next week">»</button>`:""}
+    <button class="today-btn" onclick="setDate('${todayKey()}')">TODAY</button>
+    <span class="week-label">${weekLabel(wd)}</span>
+  </div>`;
+}
+
+function jobSelectHTML(id,selected,cls){
+  const opts=activeProjects().map(p=>`<option value="${p.id}" ${selected===p.id?"selected":""}>${p.id} – ${p.name}</option>`).join("");
+  return `<select id="${id}" class="${cls||'jsel'}"><option value="">-- Project --</option>${opts}</select>`;
+}
+
+function statusBtnsHTML(emp,idx,cur){
+  return `<div class="sbtns">`+STATUS.map(s=>{
+    const a=cur===s.v;
+    return `<button class="sopt" style="background:${a?s.color:s.bg};color:${a?"#fff":s.color};border-color:${s.color}"
+      onclick="updateAssign('${emp.replace(/'/g,"\\'")}',${idx},'status','${s.v}')">${s.label}</button>`;
+  }).join("")+`</div>`;
+}
+
+// ─── DAY VIEW ────────────────────────────────────────────────────────────────
+function renderDay(){
+  const filtered=jobFilter
+    ?EMPLOYEES.filter(e=>getEmpDay(selectedDate,e).assignments.some(a=>a.job===jobFilter))
+    :EMPLOYEES;
+
+  const active=EMPLOYEES.filter(e=>!getEmpDay(selectedDate,e).off&&getEmpDay(selectedDate,e).assignments.length>0).length;
+  const off=EMPLOYEES.length-active;
+  const jc={};
+  EMPLOYEES.forEach(e=>getEmpDay(selectedDate,e).assignments.forEach(a=>{jc[a.job]=(jc[a.job]||0)+1;}));
+  const sumChips=`
+    <div class="sum-chip" style="color:#22c55e;background:#dcfce7;border-color:#22c55e">${active} Active</div>
+    <div class="sum-chip" style="color:#94a3b8;background:#f1f5f9;border-color:#d1d5db">${off} Off</div>
+    ${Object.entries(jc).sort().map(([j,c])=>`<div class="sum-chip" style="color:#1e3a5f;background:#e8edf3;border-color:#1e3a5f">#${j}: ${c}</div>`).join("")}
+  `;
+
+  let filterHTML=`<div class="filter-bar">
+    <span class="filter-label">PROJECT:</span>
+    <button class="jc ${jobFilter===''?'all':''}" onclick="toggleJobFilter('')">ALL</button>
+    ${activeProjects().map(p=>`<button class="jc ${jobFilter===p.id?'active':''}" onclick="toggleJobFilter('${p.id}')" title="${p.name}">${p.id}</button>`).join("")}
+    <button class="add-job-btn" onclick="showAddJob=true;render()">+ Project</button>
+  </div>`;
+
+  if(showAddJob){
+    filterHTML+=`<div class="add-job-row">
+      <span style="font-size:11px;font-weight:800;color:#92400e">NEW PROJECT:</span>
+      <input type="text" id="nji" placeholder="Job #" style="width:90px">
+      <input type="text" id="njn" placeholder="Project name" style="width:200px">
+      <button class="btn-gold" onclick="addProject()">Add</button>
+      <button class="btn-gray" onclick="showAddJob=false;render()">Cancel</button>
+    </div>`;
+  }
+
+  const rows=filtered.map(emp=>{
+    const ed=getEmpDay(selectedDate,emp);
+    const isEditing=editingEmp===emp;
+    const hasWork=!ed.off&&ed.assignments.length>0;
+    const sid=safeid(emp);
+    const ee=emp.replace(/'/g,"\\'");
+
+    let badges=hasWork
+      ?ed.assignments.map(a=>{const m=statusMeta(a.status);return`<span class="jbadge">#${a.job}</span><span class="sdot" style="background:${m.color}" title="${m.label}"></span>`;}).join(" ")
+      :`<span style="font-size:11px;color:#94a3b8;font-style:italic">Off</span>`;
+
+    let assignView="";
+    if(hasWork&&!isEditing){
+      assignView=`<div class="assignments">`+ed.assignments.map(a=>{
+        const m=statusMeta(a.status);
+        const pname=projectById(a.job).name;
+        return `<div class="arow">
+          <div class="ajob">#${a.job}</div>
+          <div style="font-size:11px;color:#475569;flex:1;min-width:80px">${pname}</div>
+          <div class="astatus" style="color:${m.color};background:${m.bg};border-color:${m.color}">${m.label}</div>
+          ${a.note?`<div class="anote">${a.note}</div>`:""}
+        </div>`;
+      }).join("")+`</div>`;
+    }
+
+    let editHTML="";
+    if(isEditing){
+      const existRows=ed.assignments.map((a,i)=>`
+        <div class="ear">
+          <span class="ear-num">${i+1}</span>
+          ${jobSelectHTML(`ej-${sid}-${i}`,a.job)}
+          ${statusBtnsHTML(ee,i,a.status)}
+          <input type="text" placeholder="Note" value="${a.note||''}" oninput="updateAssign('${ee}',${i},'note',this.value)">
+          <button class="del-btn" onclick="delAssign('${ee}',${i})">✕</button>
+        </div>`).join("");
+      editHTML=`<div class="edit-panel">
+        <div class="ep-title">Assignments — ${emp.split(" ")[0]}</div>
+        ${existRows}
+        <div style="font-size:11px;font-weight:800;color:#15803d;margin:6px 0 4px">+ ADD</div>
+        <div class="nar">
+          ${jobSelectHTML(`nj-${sid}`,"","njsel")}
+          <select id="ns-${sid}">${STATUS.map(s=>`<option value="${s.v}">${s.label}</option>`).join("")}</select>
+          <input type="text" id="nn-${sid}" placeholder="Note">
+          <button class="add-btn" onclick="addAssign('${ee}')">+ Add</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="done-btn" onclick="toggleEdit(null)">✓ Done</button>
+          <label class="off-toggle">
+            <label class="toggle"><input type="checkbox" ${ed.off?"checked":""} onchange="toggleOff('${ee}')"><span class="slider"></span></label>
+            Mark Off
+          </label>
+        </div>
+      </div>`;
+    }
+
+    return `<div class="emp-card ${isEditing?"editing":""} ${(!hasWork&&!isEditing)?"off-card":""}">
+      <div class="emp-header" onclick="toggleEdit('${ee}')">
+        <div class="emp-name">${emp}</div>
+        <div class="emp-badges">${badges}</div>
+        <span class="expand-icon ${isEditing?"open":""}">⌄</span>
+      </div>
+      ${assignView}${editHTML}
+    </div>`;
+  }).join("");
+
+  return dateNavHTML(false)+`<div class="summary-bar">${sumChips}</div>`+filterHTML+`<div class="emp-list">${rows}</div>`;
+}
+
+// ─── WEEK VIEW ───────────────────────────────────────────────────────────────
+function renderWeek(){
+  const wd=getWeekDates();
+  const hdr=wd.map((d,i)=>`<th class="${d===selectedDate?"tdc":""}" onclick="selectedDate='${d}';editingEmp=null;switchView('day')" style="cursor:pointer">${WEEK_DAYS[i]}<br><span style="font-weight:400;font-size:9px">${fmt(d)}</span></th>`).join("");
+  const rows=EMPLOYEES.map(emp=>{
+    const cells=wd.map(d=>{
+      const ed=getEmpDay(d,emp);
+      const hw=!ed.off&&ed.assignments.length>0;
+      return `<td onclick="selectedDate='${d}';editingEmp='${emp.replace(/'/g,"\\'")}';switchView('day')">${hw?ed.assignments.map(a=>{const m=statusMeta(a.status);return`<div class="cjob"><span class="cdot" style="background:${m.color}"></span>${a.job}</div>`;}).join(""):""}</td>`;
+    }).join("");
+    return `<tr><td class="etd">${emp}</td>${cells}</tr>`;
+  }).join("");
+  return dateNavHTML(true)+`<div class="week-scroll"><table><thead><tr><th class="ec">EMPLOYEE</th>${hdr}</tr></thead><tbody>${rows}</tbody></table><p style="font-size:10px;color:#94a3b8;margin-top:5px">Tap cell to edit. Week: Fri → Thu.</p></div>`;
+}
+
+// ─── JOB VIEW ────────────────────────────────────────────────────────────────
+function renderJob(){
+  const jm={};
+  EMPLOYEES.forEach(emp=>{
+    const ed=getEmpDay(selectedDate,emp);
+    if(!ed.off) ed.assignments.forEach(a=>{if(!jm[a.job])jm[a.job]=[];jm[a.job].push({emp,status:a.status,note:a.note});});
+  });
+  const sorted=Object.entries(jm).sort((a,b)=>a[0].localeCompare(b[0]));
+  let cardsHTML=sorted.length===0?`<div class="empty-msg">No assignments. Go to Day view to assign workers.</div>`
+    :`<div class="job-grid">`+sorted.map(([job,workers])=>{
+      const p=projectById(job);
+      return `<div class="jcard"><div class="jcard-hdr"><span class="jcard-cnt">${workers.length}w</span><div class="jcard-num">#${p.id}</div><div class="jcard-name">${p.name}</div></div>
+      <div class="jcard-body">${workers.map(w=>{const m=statusMeta(w.status);return`<div class="wrow"><div class="wdot" style="background:${m.color}"></div><div style="flex:1"><div class="wname">${w.emp}</div>${w.note?`<div class="wnote">${w.note}</div>`:""}</div><div class="wstat" style="color:${m.color}">${m.label}</div></div>`;}).join("")}</div></div>`;
+    }).join("")+`</div>`;
+  const un=EMPLOYEES.filter(e=>{const ed=getEmpDay(selectedDate,e);return ed.off||ed.assignments.length===0;});
+  return dateNavHTML(false)+cardsHTML+`<div class="unbox"><div class="unbox-title">OFF / UNASSIGNED (${un.length})</div><div class="off-chips">${un.map(e=>{const p=e.split(" ");return`<span class="oc">${p[0]} ${p[1]?.[0]||""}.</span>`;}).join("")||'<span style="color:#94a3b8;font-size:11px">All assigned</span>'}</div></div>`;
+}
+
+// ─── PROJECTS TAB ────────────────────────────────────────────────────────────
+function renderProjects(){
+  const active=projects.filter(p=>!p.archived);
+  const archived=projects.filter(p=>p.archived);
+
+  const projRows=active.map(p=>{
+    const sid=safeid(p.id);
+    const isEditing=editingProjId===p.id;
+    if(isEditing){
+      return `<tr style="background:#fffbeb">
+        <td colspan="2" style="padding:7px 10px">
+          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:11px;font-weight:800;color:#92400e">JOB #</span>
+            <input id="epid-${sid}" value="${p.id}" style="width:90px;font-size:12px;padding:4px 7px;border-radius:6px;border:1.5px solid #c8a84b;">
+            <span style="font-size:11px;font-weight:800;color:#92400e">NAME</span>
+            <input id="epname-${sid}" value="${p.name}" style="flex:1;min-width:150px;font-size:12px;padding:4px 7px;border-radius:6px;border:1.5px solid #c8a84b;">
+            <button class="btn-gold" onclick="saveEditProject('${p.id}')">Save</button>
+            <button class="btn-gray" onclick="cancelEditProject()">Cancel</button>
+          </div>
+        </td>
+        <td style="padding:7px 10px;white-space:nowrap"></td>
+      </tr>`;
+    }
+    return `<tr>
+      <td style="padding:6px 10px;font-weight:800;color:#1e3a5f;font-size:12px;width:90px">${p.id}</td>
+      <td style="padding:6px 10px;color:#334155;font-size:12px">${p.name}</td>
+      <td style="padding:6px 10px;white-space:nowrap;text-align:right">
+        <button class="btn-gray" style="font-size:11px;padding:3px 9px;margin-right:4px" onclick="startEditProject('${p.id}')">✏ Edit</button>
+        <button class="btn-red" style="font-size:11px;padding:3px 9px" onclick="archiveProject('${p.id}')">Archive</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  const archRows=archived.length===0?"":archived.map(p=>`
+    <tr style="background:#f8fafc">
+      <td style="padding:5px 10px;font-weight:800;color:#94a3b8;font-size:12px">${p.id}</td>
+      <td style="padding:5px 10px;color:#94a3b8;font-size:12px">${p.name} <span class="badge-archived">ARCHIVED</span></td>
+      <td style="padding:5px 10px;white-space:nowrap;text-align:right">
+        <button class="btn-gold" style="font-size:11px;padding:3px 9px;margin-right:4px" onclick="restoreProject('${p.id}')">Restore</button>
+        <button class="btn-red" style="font-size:11px;padding:3px 9px" onclick="deleteProject('${p.id}')">Delete</button>
+      </td>
+    </tr>`).join("");
+
+  let addRow="";
+  if(showAddJob){
+    addRow=`<div class="add-job-row" style="margin-bottom:12px">
+      <span style="font-size:11px;font-weight:800;color:#92400e">NEW PROJECT:</span>
+      <input type="text" id="nji" placeholder="Job # (e.g. 2910)" style="width:110px">
+      <input type="text" id="njn" placeholder="Project name" style="width:220px">
+      <button class="btn-gold" onclick="addProject()">Add</button>
+      <button class="btn-gray" onclick="showAddJob=false;render()">Cancel</button>
+    </div>`;
+  }
+
+  return `<div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <h2 style="font-size:15px;font-weight:800;color:#1e3a5f">Project List</h2>
+      <p style="font-size:12px;color:#64748b;margin-top:2px">${active.length} active projects. Edit name/number inline, archive when complete.</p>
+    </div>
+    <button class="btn-gold" onclick="showAddJob=true;render()">+ New Project</button>
+  </div>
+  ${addRow}
+  <div class="proj-table">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#1e3a5f">
+        <th style="padding:8px 10px;text-align:left;color:#c8a84b;font-weight:800;width:90px">Job #</th>
+        <th style="padding:8px 10px;text-align:left;color:#e2e8f0;font-weight:700">Project Name</th>
+        <th style="padding:8px 10px;text-align:right;color:#e2e8f0;font-weight:700">Actions</th>
+      </tr></thead>
+      <tbody>${projRows}${archRows}</tbody>
+    </table>
+  </div>
+  <p style="font-size:11px;color:#94a3b8;margin-top:6px">Archived projects are hidden from job dropdowns but historical data is preserved. Deleting is permanent.</p>`;
+}
+
+render();
+</script>
+</body>
+</html>    
